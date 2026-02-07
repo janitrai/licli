@@ -2,8 +2,6 @@ package auth
 
 import (
 	"context"
-	"crypto/rand"
-	"encoding/base64"
 	"errors"
 	"fmt"
 	"net/url"
@@ -82,14 +80,6 @@ func NormalizePublicIdentifier(s string) string {
 	}
 
 	return s
-}
-
-func RandomTrackingID() (string, error) {
-	var b [16]byte
-	if _, err := rand.Read(b[:]); err != nil {
-		return "", fmt.Errorf("random bytes: %w", err)
-	}
-	return base64.StdEncoding.EncodeToString(b[:]), nil
 }
 
 func OpenBrowser(rawURL string) error {

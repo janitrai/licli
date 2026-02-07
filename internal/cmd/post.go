@@ -1,7 +1,6 @@
 package cmd
 
 import (
-	"context"
 	"fmt"
 	"strings"
 	"time"
@@ -29,9 +28,12 @@ var postCreateCmd = &cobra.Command{
 		}
 
 		text := strings.Join(args, " ")
-		me, _ := li.GetMe(context.Background())
+		me, err := li.GetMe(cmd.Context())
+		if err != nil {
+			return fmt.Errorf("get current user: %w", err)
+		}
 
-		res, err := li.CreatePost(context.Background(), me.MemberURN, text)
+		res, err := li.CreatePost(cmd.Context(), me.MemberURN, text)
 		if err != nil {
 			return err
 		}
@@ -59,12 +61,12 @@ var postListCmd = &cobra.Command{
 			return err
 		}
 
-		me, err := li.GetMe(context.Background())
+		me, err := li.GetMe(cmd.Context())
 		if err != nil {
 			return err
 		}
 
-		updates, err := li.ListProfilePosts(context.Background(), me.MiniProfileEntityURN, 0, postListLimit)
+		updates, err := li.ListProfilePosts(cmd.Context(), me.MiniProfileEntityURN, 0, postListLimit)
 		if err != nil {
 			return err
 		}

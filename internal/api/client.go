@@ -183,6 +183,15 @@ func (c *Client) doInternal(ctx context.Context, method, path string, rawQuery s
 		fmt.Fprintf(c.DebugOut, "[li] -> %d (%d bytes)\n", resp.StatusCode, len(respBody))
 	}
 
+	if resp.StatusCode == http.StatusTooManyRequests {
+		return &HTTPError{
+			Method:     method,
+			URL:        u.String(),
+			StatusCode: resp.StatusCode,
+			Body:       "rate limited by LinkedIn, try again later",
+		}
+	}
+
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
 		snippet := strings.TrimSpace(string(respBody))
 		if len(snippet) > 2000 {

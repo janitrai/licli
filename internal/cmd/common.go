@@ -46,5 +46,7 @@ func newLinkedIn(cfg config.Config) (*api.LinkedIn, error) {
 	if err != nil {
 		return nil, err
 	}
-	return api.NewLinkedIn(client), nil
+	li := api.NewLinkedIn(client)
+	li.SearchQueryID = cfg.SearchQueryID
+	return li, nil
 }

@@ -1,7 +1,6 @@
 package cmd
 
 import (
-	"context"
 	"fmt"
 	"strings"
 
@@ -30,7 +29,7 @@ var searchPeopleCmd = &cobra.Command{
 		}
 
 		query := strings.Join(args, " ")
-		items, err := li.SearchPeople(context.Background(), query, 0, searchLimit)
+		items, err := li.SearchPeople(cmd.Context(), query, 0, searchLimit)
 		if err != nil {
 			return err
 		}
@@ -70,7 +69,7 @@ var searchJobsCmd = &cobra.Command{
 		}
 
 		query := strings.Join(args, " ")
-		items, err := li.SearchJobs(context.Background(), query, 0, searchLimit)
+		items, err := li.SearchJobs(cmd.Context(), query, 0, searchLimit)
 		if err != nil {
 			return err
 		}

@@ -1,7 +1,6 @@
 package cmd
 
 import (
-	"context"
 	"fmt"
 
 	"github.com/horsefit/li/internal/auth"
@@ -23,7 +22,7 @@ var followCmd = &cobra.Command{
 		}
 
 		publicID := auth.NormalizePublicIdentifier(args[0])
-		profile, err := li.GetProfile(context.Background(), publicID)
+		profile, err := li.GetProfile(cmd.Context(), publicID)
 		if err != nil {
 			return err
 		}
@@ -31,7 +30,7 @@ var followCmd = &cobra.Command{
 			return fmt.Errorf("could not determine member urn for %q", publicID)
 		}
 
-		if err := li.Follow(context.Background(), profile.MemberURN); err != nil {
+		if err := li.Follow(cmd.Context(), profile.MemberURN); err != nil {
 			return err
 		}
 		fmt.Fprintf(cmd.OutOrStdout(), "Followed %s\n", publicID)

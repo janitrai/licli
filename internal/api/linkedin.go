@@ -9,8 +9,13 @@ import (
 	"github.com/horsefit/li/internal/auth"
 )
 
+// DefaultSearchQueryID is the default GraphQL query ID for search clusters.
+// LinkedIn rotates these periodically; update via config if search returns 500.
+const DefaultSearchQueryID = "voyagerSearchDashClusters.ef3d0937fb65bd7812e32e5a85028e79"
+
 type LinkedIn struct {
-	c *Client
+	c             *Client
+	SearchQueryID string
 }
 
 func NewLinkedIn(c *Client) *LinkedIn {
@@ -39,19 +44,19 @@ func (li *LinkedIn) GetMe(ctx context.Context) (Me, error) {
 	//   included[] → array of resolved entities (miniProfile lives here)
 	mini := findMiniProfile(raw)
 
-	publicID := getStringFrom(mini, "publicIdentifier")
-	first := getStringFrom(mini, "firstName")
-	last := getStringFrom(mini, "lastName")
-	occupation := getStringFrom(mini, "occupation")
-	miniEntityURN := getStringFrom(mini, "entityUrn")
+	publicID := getString(mini, "publicIdentifier")
+	first := getString(mini, "firstName")
+	last := getString(mini, "lastName")
+	occupation := getString(mini, "occupation")
+	miniEntityURN := getString(mini, "entityUrn")
 	if miniEntityURN == "" {
-		miniEntityURN = getStringFrom(mini, "dashEntityUrn")
+		miniEntityURN = getString(mini, "dashEntityUrn")
 	}
 
 	memberID := urnID(miniEntityURN)
 	if memberID == "" {
 		// Try objectUrn: "urn:li:member:123"
-		memberID = urnID(getStringFrom(mini, "objectUrn"))
+		memberID = urnID(getString(mini, "objectUrn"))
 	}
 	memberURN := ""
 	if memberID != "" {
@@ -130,14 +135,6 @@ func findProfileInIncluded(raw map[string]any) map[string]any {
 	return nil
 }
 
-func getStringFrom(m map[string]any, key string) string {
-	if m == nil {
-		return ""
-	}
-	v, _ := m[key].(string)
-	return v
-}
-
 type Profile struct {
 	PublicIdentifier string
 	FirstName        string
@@ -167,23 +164,23 @@ func (li *LinkedIn) GetProfile(ctx context.Context, publicIdentifierOrURN string
 	// The dash API returns a normalized response with profile data in included[]
 	prof := findProfileInIncluded(raw)
 
-	profilePublicID := getStringFrom(prof, "publicIdentifier")
-	first := getStringFrom(prof, "firstName")
-	last := getStringFrom(prof, "lastName")
-	headline := getStringFrom(prof, "headline")
-	summary := getStringFrom(prof, "summary")
-	location := getStringFrom(prof, "geoLocationName")
+	profilePublicID := getString(prof, "publicIdentifier")
+	first := getString(prof, "firstName")
+	last := getString(prof, "lastName")
+	headline := getString(prof, "headline")
+	summary := getString(prof, "summary")
+	location := getString(prof, "geoLocationName")
 	if location == "" {
-		location = getStringFrom(prof, "locationName")
+		location = getString(prof, "locationName")
 	}
 
-	entityURN := getStringFrom(prof, "entityUrn")
+	entityURN := getString(prof, "entityUrn")
 	if entityURN == "" {
-		entityURN = getStringFrom(prof, "dashEntityUrn")
+		entityURN = getString(prof, "dashEntityUrn")
 	}
 	memberID := urnID(entityURN)
 	if memberID == "" {
-		memberID = urnID(getStringFrom(prof, "objectUrn"))
+		memberID = urnID(getString(prof, "objectUrn"))
 	}
 	memberURN := ""
 	if memberID != "" {
@@ -322,9 +319,12 @@ type SearchItem struct {
 	TargetURN         string
 }
 
-// SearchQueryID is the GraphQL query ID for search clusters.
-// LinkedIn rotates these periodically; update if search returns 500.
-const SearchQueryID = "voyagerSearchDashClusters.ef3d0937fb65bd7812e32e5a85028e79"
+func (li *LinkedIn) searchQueryID() string {
+	if li.SearchQueryID != "" {
+		return li.SearchQueryID
+	}
+	return DefaultSearchQueryID
+}
 
 func (li *LinkedIn) SearchPeople(ctx context.Context, keywords string, start, count int) ([]SearchItem, error) {
 	return li.searchGraphQL(ctx, keywords, "PEOPLE", start, count)
@@ -356,7 +356,7 @@ func (li *LinkedIn) searchGraphQL(ctx context.Context, keywords string, resultTy
 
 	// Build the raw query string manually to avoid double-encoding the tuple syntax
 	rawQuery := fmt.Sprintf("includeWebMetadata=true&variables=%s&queryId=%s",
-		variables, SearchQueryID)
+		variables, li.searchQueryID())
 
 	var raw map[string]any
 	if err := li.c.DoRaw(ctx, "GET", "/graphql", rawQuery, nil, &raw); err != nil {
@@ -425,7 +425,11 @@ func (li *LinkedIn) Follow(ctx context.Context, memberURN string) error {
 		return fmt.Errorf("unexpected member urn: %q", memberURN)
 	}
 
-	followingInfoURN := "urn:li:fs_followingInfo:" + memberURN
+	memberID := urnID(memberURN)
+	if memberID == "" {
+		return fmt.Errorf("cannot extract member ID from %q", memberURN)
+	}
+	followingInfoURN := "urn:li:fs_followingInfo:" + memberID
 	payload := map[string]any{"urn": followingInfoURN}
 
 	q := url.Values{}

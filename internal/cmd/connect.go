@@ -1,7 +1,6 @@
 package cmd
 
 import (
-	"context"
 	"fmt"
 
 	"github.com/horsefit/li/internal/auth"
@@ -25,7 +24,7 @@ var connectCmd = &cobra.Command{
 		}
 
 		publicID := auth.NormalizePublicIdentifier(args[0])
-		profile, err := li.GetProfile(context.Background(), publicID)
+		profile, err := li.GetProfile(cmd.Context(), publicID)
 		if err != nil {
 			return err
 		}
@@ -33,7 +32,7 @@ var connectCmd = &cobra.Command{
 			return fmt.Errorf("could not determine profile URN for %q", publicID)
 		}
 
-		if err := li.Connect(context.Background(), profile.MiniProfileEntityURN, connectNote); err != nil {
+		if err := li.Connect(cmd.Context(), profile.MiniProfileEntityURN, connectNote); err != nil {
 			return err
 		}
 

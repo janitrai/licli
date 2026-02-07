@@ -1,7 +1,6 @@
 package cmd
 
 import (
-	"context"
 	"fmt"
 	"strings"
 
@@ -30,7 +29,7 @@ var profileViewCmd = &cobra.Command{
 
 		publicID := ""
 		if len(args) == 0 {
-			me, err := li.GetMe(context.Background())
+			me, err := li.GetMe(cmd.Context())
 			if err != nil {
 				return err
 			}
@@ -42,7 +41,7 @@ var profileViewCmd = &cobra.Command{
 			return fmt.Errorf("missing profile identifier")
 		}
 
-		p, err := li.GetProfile(context.Background(), publicID)
+		p, err := li.GetProfile(cmd.Context(), publicID)
 		if err != nil {
 			return err
 		}

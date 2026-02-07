@@ -15,7 +15,7 @@ Note: this uses LinkedIn's internal Voyager API (`https://www.linkedin.com/voyag
 ## Installation
 
 ```bash
-go install github.com/horsefit/li@latest
+go install github.com/janitrai/licli@latest
 ```
 
 ## Usage
@@ -55,8 +55,8 @@ export LI_CONFIG_PATH=/path/to/config.json
 ## Development
 
 ```bash
-git clone https://github.com/horsefit/li
-cd li
+git clone https://github.com/janitrai/licli
+cd licli
 go build
 ```
 
