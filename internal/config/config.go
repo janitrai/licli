@@ -18,8 +18,10 @@ const (
 )
 
 type Config struct {
-	Auth          AuthConfig `json:"auth"`
-	SearchQueryID string     `json:"search_query_id,omitempty"`
+	Auth                 AuthConfig `json:"auth"`
+	SearchQueryID        string     `json:"search_query_id,omitempty"`
+	ConversationsQueryID string     `json:"conversations_query_id,omitempty"`
+	MessagesQueryID      string     `json:"messages_query_id,omitempty"`
 }
 
 type AuthConfig struct {

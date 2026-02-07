@@ -14,8 +14,10 @@ import (
 const DefaultSearchQueryID = "voyagerSearchDashClusters.ef3d0937fb65bd7812e32e5a85028e79"
 
 type LinkedIn struct {
-	c             *Client
-	SearchQueryID string
+	c                    *Client
+	SearchQueryID        string
+	ConversationsQueryID string
+	MessagesQueryID      string
 }
 
 func NewLinkedIn(c *Client) *LinkedIn {
@@ -29,6 +31,7 @@ type Me struct {
 	Occupation       string
 
 	MiniProfileEntityURN string
+	ProfileURN           string // urn:li:fsd_profile:… (dash format, used for messaging)
 	MemberID             string
 	MemberURN            string
 }
@@ -63,12 +66,19 @@ func (li *LinkedIn) GetMe(ctx context.Context) (Me, error) {
 		memberURN = "urn:li:member:" + memberID
 	}
 
+	// Prefer dashEntityUrn (urn:li:fsd_profile:…) for messaging and other dash APIs.
+	profileURN := getString(mini, "dashEntityUrn")
+	if profileURN == "" && strings.Contains(miniEntityURN, "fsd_profile") {
+		profileURN = miniEntityURN
+	}
+
 	return Me{
 		PublicIdentifier:     publicID,
 		FirstName:            first,
 		LastName:             last,
 		Occupation:           occupation,
 		MiniProfileEntityURN: miniEntityURN,
+		ProfileURN:           profileURN,
 		MemberID:             memberID,
 		MemberURN:            memberURN,
 	}, nil

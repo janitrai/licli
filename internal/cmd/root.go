@@ -30,4 +30,5 @@ func init() {
 	rootCmd.AddCommand(searchCmd)
 	rootCmd.AddCommand(connectCmd)
 	rootCmd.AddCommand(followCmd)
+	rootCmd.AddCommand(messageCmd)
 }

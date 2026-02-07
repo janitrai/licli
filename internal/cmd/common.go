@@ -48,5 +48,7 @@ func newLinkedIn(cfg config.Config) (*api.LinkedIn, error) {
 	}
 	li := api.NewLinkedIn(client)
 	li.SearchQueryID = cfg.SearchQueryID
+	li.ConversationsQueryID = cfg.ConversationsQueryID
+	li.MessagesQueryID = cfg.MessagesQueryID
 	return li, nil
 }
