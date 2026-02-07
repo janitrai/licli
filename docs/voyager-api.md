@@ -127,6 +127,26 @@ POST /voyagerMessagingDashMessengerMessages?action=createMessage
 }
 ```
 
+#### New conversation (no existing thread)
+
+Use the **same** `createMessage` endpoint but replace `conversationUrn` with `hostRecipientUrns`:
+
+```json
+{
+  "message": {
+    "body": { "attributes": [], "text": "hello!" },
+    "renderContentUnions": [],
+    "originToken": "uuid-v4"
+  },
+  "mailboxUrn": "urn:li:fsd_profile:YOUR_ID",
+  "hostRecipientUrns": ["urn:li:fsd_profile:RECIPIENT_ID"],
+  "trackingId": "<16 raw latin-1 bytes>",
+  "dedupeByClientGeneratedToken": false
+}
+```
+
+The legacy `/messaging/conversations?action=create` endpoint returns 403 for many users even when messaging is enabled — do NOT use it. The dash `createMessage` endpoint with `hostRecipientUrns` is what the browser actually uses.
+
 #### trackingId encoding (critical)
 
 The `trackingId` MUST be 16 random bytes encoded as a **Latin-1 string** (each byte value 0x00–0xFF maps to its Unicode codepoint). 
