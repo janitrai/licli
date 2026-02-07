@@ -181,6 +181,8 @@ func (li *LinkedIn) SendMessage(ctx context.Context, mailboxURN, conversationURN
 
 // CreateConversationWithMessage starts a new conversation with a message.
 // recipientURNs are urn:li:fsd_profile:… URNs.
+// Uses the legacy /messaging/conversations endpoint which still works for
+// creating new conversations (the dash endpoint does not support this).
 func (li *LinkedIn) CreateConversationWithMessage(ctx context.Context, mailboxURN string, recipientURNs []string, text string) error {
 	if strings.TrimSpace(text) == "" {
 		return fmt.Errorf("empty message text")
@@ -194,24 +196,32 @@ func (li *LinkedIn) CreateConversationWithMessage(ctx context.Context, mailboxUR
 		recipients[i] = r
 	}
 
-	payload := map[string]any{
-		"message": map[string]any{
-			"body": map[string]any{
-				"text":       text,
-				"attributes": []any{},
+	messageEvent := map[string]any{
+		"eventCreate": map[string]any{
+			"originToken": uuid.New().String(),
+			"value": map[string]any{
+				"com.linkedin.voyager.messaging.create.MessageCreate": map[string]any{
+					"attributedBody": map[string]any{
+						"text":       text,
+						"attributes": []any{},
+					},
+					"attachments": []any{},
+				},
 			},
-			"renderContentUnions": []any{},
-			"originToken":         uuid.New().String(),
+			"trackingId": generateTrackingID(),
 		},
-		"recipients":                   recipients,
-		"mailboxUrn":                   mailboxURN,
-		"trackingId":                   generateTrackingID(),
-		"subtype":                      "MEMBER_TO_MEMBER",
 		"dedupeByClientGeneratedToken": false,
+		"recipients":                   recipients,
+		"subtype":                      "MEMBER_TO_MEMBER",
+	}
+
+	payload := map[string]any{
+		"keyVersion":        "LEGACY_INBOX",
+		"conversationCreate": messageEvent,
 	}
 
 	rawQuery := "action=create"
-	return li.c.DoMessaging(ctx, "POST", "voyagerMessagingDashMessengerConversations", rawQuery, payload, nil)
+	return li.c.DoMessaging(ctx, "POST", "messaging/conversations", rawQuery, payload, nil)
 }
 
 // ---------------------------------------------------------------------------
