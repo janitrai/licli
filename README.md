@@ -2,15 +2,15 @@
 
 A command-line interface for LinkedIn, inspired by `gh` (GitHub CLI).
 
-## Features (planned)
+## Features
 
-- **Authentication**: OAuth or session-based login
-- **Posts**: Create, view, like, comment on posts
-- **Network**: Follow/unfollow, connect, view connections
-- **Profile**: View and update profile
-- **Search**: Search people, companies, jobs
-- **Messages**: Send and read messages
-- **Notifications**: View notifications
+- **Authentication**: Browser-session login (stores `li_at` + `JSESSIONID`)
+- **Posts**: Create and list posts
+- **Network**: Follow and connect
+- **Profile**: View profiles (including your own)
+- **Search**: Search people and jobs
+
+Note: this uses LinkedIn's internal Voyager API (`https://www.linkedin.com/voyager/api`) and may break if LinkedIn changes it.
 
 ## Installation
 
@@ -23,6 +23,7 @@ go install github.com/horsefit/li@latest
 ```bash
 # Login
 li auth login
+li auth status
 
 # Post
 li post create "Hello LinkedIn!"
@@ -39,6 +40,16 @@ li profile me
 # Search
 li search people "software engineer berlin"
 li search jobs "golang developer"
+```
+
+## Config
+
+By default, config is stored at `$XDG_CONFIG_HOME/li/config.json` (Linux typically `~/.config/li/config.json`).
+
+Override with:
+
+```bash
+export LI_CONFIG_PATH=/path/to/config.json
 ```
 
 ## Development
