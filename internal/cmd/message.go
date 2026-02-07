@@ -110,7 +110,7 @@ var messageReadCmd = &cobra.Command{
 		}
 
 		// 3. List conversations and find the one with the target.
-		convos, err := li.ListConversations(cmd.Context(), myProfileURN, 40)
+		convos, err := li.ListConversations(cmd.Context(), myProfileURN, 25)
 		if err != nil {
 			return fmt.Errorf("list conversations: %w", err)
 		}
@@ -185,7 +185,7 @@ var messageSendCmd = &cobra.Command{
 		text := strings.Join(args[1:], " ")
 
 		// 3. Try to find an existing conversation.
-		convos, err := li.ListConversations(cmd.Context(), myProfileURN, 40)
+		convos, err := li.ListConversations(cmd.Context(), myProfileURN, 25)
 		if err != nil {
 			return fmt.Errorf("list conversations: %w", err)
 		}
