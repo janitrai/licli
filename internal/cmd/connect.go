@@ -29,11 +29,11 @@ var connectCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		if profile.MemberID == "" {
-			return fmt.Errorf("could not determine profile id for %q", publicID)
+		if profile.MiniProfileEntityURN == "" {
+			return fmt.Errorf("could not determine profile URN for %q", publicID)
 		}
 
-		if err := li.Connect(context.Background(), profile.MemberID, connectNote); err != nil {
+		if err := li.Connect(context.Background(), profile.MiniProfileEntityURN, connectNote); err != nil {
 			return err
 		}
 

@@ -212,29 +212,17 @@ func (li *LinkedIn) CreatePost(ctx context.Context, ownerURN string, text string
 		return CreatePostResult{}, fmt.Errorf("post text is empty")
 	}
 
-	trackingID, _ := auth.RandomTrackingID()
-
 	payload := map[string]any{
-		"commentary": map[string]any{
-			"text": text,
+		"visibleToConnectionsOnly":  false,
+		"externalAudienceProviders": []any{},
+		"commentaryV2": map[string]any{
+			"text":          text,
+			"attributesV2":  []any{},
 		},
-		"visibility": "PUBLIC",
-		"distribution": map[string]any{
-			"feedDistribution":                "MAIN_FEED",
-			"targetEntities":                  []any{},
-			"thirdPartyDistributionChannels":  []any{},
-			"thirdPartyDistributionTargeting": []any{},
-		},
-		"lifecycleState":            "PUBLISHED",
-		"isReshareDisabledByAuthor": false,
-		"shareMediaCategory":        "NONE",
-	}
-	if trackingID != "" {
-		payload["trackingId"] = trackingID
-	}
-	if ownerURN != "" {
-		// Not always required, but helps ensure the post is created for the authenticated member.
-		payload["owner"] = ownerURN
+		"origin":                 "FEED",
+		"allowedCommentersScope": "ALL",
+		"postState":              "PUBLISHED",
+		"mediaCategory":          "NONE",
 	}
 
 	var raw map[string]any
@@ -260,9 +248,9 @@ type FeedUpdate struct {
 	PublishedAt int64
 }
 
-func (li *LinkedIn) ListProfilePosts(ctx context.Context, profileID string, start, count int) ([]FeedUpdate, error) {
-	if strings.TrimSpace(profileID) == "" {
-		return nil, fmt.Errorf("empty profile id")
+func (li *LinkedIn) ListProfilePosts(ctx context.Context, profileURN string, start, count int) ([]FeedUpdate, error) {
+	if strings.TrimSpace(profileURN) == "" {
+		return nil, fmt.Errorf("empty profile identifier")
 	}
 	if count <= 0 {
 		count = 10
@@ -276,14 +264,32 @@ func (li *LinkedIn) ListProfilePosts(ctx context.Context, profileID string, star
 	q.Set("moduleKey", "member-share")
 	q.Set("count", fmt.Sprintf("%d", count))
 	q.Set("start", fmt.Sprintf("%d", start))
-	q.Set("profileId", profileID)
+	q.Set("profileUrn", profileURN)
 
 	var raw map[string]any
-	if err := li.c.Do(ctx, "GET", "/feed/updates", q, nil, &raw); err != nil {
+	if err := li.c.Do(ctx, "GET", "/feed/dash/updates", q, nil, &raw); err != nil {
 		return nil, err
 	}
 
+	// The dash endpoint returns data in included[] as normalized entities
+	// Check both elements (direct) and included[] (normalized)
 	elements, _ := raw["elements"].([]any)
+	if len(elements) == 0 {
+		// Try extracting from included[] for normalized responses
+		included, _ := raw["included"].([]any)
+		for _, item := range included {
+			m, ok := item.(map[string]any)
+			if !ok {
+				continue
+			}
+			t, _ := m["$type"].(string)
+			urn, _ := m["entityUrn"].(string)
+			if strings.Contains(t, "Update") || strings.Contains(urn, "urn:li:fs_update") || strings.Contains(urn, "activity") {
+				elements = append(elements, item)
+			}
+		}
+	}
+
 	out := make([]FeedUpdate, 0, len(elements))
 	for _, el := range elements {
 		m, ok := el.(map[string]any)
@@ -424,32 +430,28 @@ func (li *LinkedIn) Follow(ctx context.Context, memberURN string) error {
 
 	q := url.Values{}
 	q.Set("action", "followByEntityUrn")
-	return li.c.Do(ctx, "POST", "/feed/follows", q, payload, nil)
+	return li.c.Do(ctx, "POST", "/feed/dash/follows", q, payload, nil)
 }
 
-func (li *LinkedIn) Connect(ctx context.Context, profileID string, note string) error {
-	profileID = strings.TrimSpace(profileID)
-	if profileID == "" {
-		return fmt.Errorf("empty profile id")
+func (li *LinkedIn) Connect(ctx context.Context, profileURN string, note string) error {
+	profileURN = strings.TrimSpace(profileURN)
+	if profileURN == "" {
+		return fmt.Errorf("empty profile URN")
+	}
+	if !strings.Contains(profileURN, "fsd_profile") {
+		return fmt.Errorf("expected fsd_profile URN, got: %q", profileURN)
 	}
 
-	trackingID, _ := auth.RandomTrackingID()
 	payload := map[string]any{
-		"emberEntityName": "growth/invitation/norm-invitation",
-		"invitee": map[string]any{
-			"com.linkedin.voyager.growth.invitation.InviteeProfile": map[string]any{
-				"profileId": profileID,
-			},
-		},
-	}
-	if trackingID != "" {
-		payload["trackingId"] = trackingID
+		"inviteeProfileUrn": profileURN,
 	}
 	if strings.TrimSpace(note) != "" {
 		payload["customMessage"] = note
 	}
 
-	return li.c.Do(ctx, "POST", "/growth/normInvitations", nil, payload, nil)
+	q := url.Values{}
+	q.Set("action", "verifyQuotaAndCreate")
+	return li.c.Do(ctx, "POST", "/voyagerRelationshipsDashMemberRelationships", q, payload, nil)
 }
 
 func urnID(urn string) string {

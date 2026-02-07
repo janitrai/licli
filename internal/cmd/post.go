@@ -64,7 +64,7 @@ var postListCmd = &cobra.Command{
 			return err
 		}
 
-		updates, err := li.ListProfilePosts(context.Background(), me.PublicIdentifier, 0, postListLimit)
+		updates, err := li.ListProfilePosts(context.Background(), me.MiniProfileEntityURN, 0, postListLimit)
 		if err != nil {
 			return err
 		}
