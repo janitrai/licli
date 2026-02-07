@@ -217,6 +217,8 @@ All responses use `{ "data": {...}, "included": [...] }` wrapper (normalized for
 4. **Legacy messaging API is dead** — `/messaging/conversations` with `keyVersion: LEGACY_INBOX` returns 400 now
 5. **Send message trackingId is binary** — must be raw latin-1 bytes, not base64 (see above)
 6. **Content-Type for messaging writes** — must be `text/plain;charset=UTF-8`, not `application/json`
+7. **New conversations use createMessage, not create** — the legacy `/messaging/conversations?action=create` returns 403 for many users. The browser uses `createMessage` with `hostRecipientUrns` instead of `conversationUrn`
+8. **Rate limits are aggressive** — heavy API usage triggers 429s that can last minutes to hours
 
 ## Discovery method
 
