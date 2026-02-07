@@ -34,29 +34,25 @@ func (li *LinkedIn) GetMe(ctx context.Context) (Me, error) {
 		return Me{}, err
 	}
 
-	miniEntityURN := getString(raw, "miniProfile", "entityUrn")
+	// The /me response uses LinkedIn's normalized format:
+	//   data.*miniProfile → URN reference
+	//   included[] → array of resolved entities (miniProfile lives here)
+	mini := findMiniProfile(raw)
+
+	publicID := getStringFrom(mini, "publicIdentifier")
+	first := getStringFrom(mini, "firstName")
+	last := getStringFrom(mini, "lastName")
+	occupation := getStringFrom(mini, "occupation")
+	miniEntityURN := getStringFrom(mini, "entityUrn")
 	if miniEntityURN == "" {
-		miniEntityURN = getString(raw, "data", "miniProfile", "entityUrn")
-	}
-
-	publicID := getString(raw, "miniProfile", "publicIdentifier")
-	if publicID == "" {
-		publicID = getString(raw, "data", "miniProfile", "publicIdentifier")
-	}
-
-	first := getString(raw, "miniProfile", "firstName")
-	last := getString(raw, "miniProfile", "lastName")
-	if first == "" && last == "" {
-		first = getString(raw, "data", "miniProfile", "firstName")
-		last = getString(raw, "data", "miniProfile", "lastName")
-	}
-
-	occupation := getString(raw, "miniProfile", "occupation")
-	if occupation == "" {
-		occupation = getString(raw, "data", "miniProfile", "occupation")
+		miniEntityURN = getStringFrom(mini, "dashEntityUrn")
 	}
 
 	memberID := urnID(miniEntityURN)
+	if memberID == "" {
+		// Try objectUrn: "urn:li:member:123"
+		memberID = urnID(getStringFrom(mini, "objectUrn"))
+	}
 	memberURN := ""
 	if memberID != "" {
 		memberURN = "urn:li:member:" + memberID
@@ -71,6 +67,75 @@ func (li *LinkedIn) GetMe(ctx context.Context) (Me, error) {
 		MemberID:             memberID,
 		MemberURN:            memberURN,
 	}, nil
+}
+
+// findMiniProfile extracts the miniProfile object from LinkedIn's normalized response.
+// It checks included[] first (normalized format), then falls back to nested paths.
+func findMiniProfile(raw map[string]any) map[string]any {
+	// Check included[] array for a miniProfile entity
+	if included, ok := raw["included"].([]any); ok {
+		for _, item := range included {
+			m, ok := item.(map[string]any)
+			if !ok {
+				continue
+			}
+			// miniProfiles have entityUrn containing "fs_miniProfile" or "fsd_profile"
+			urn, _ := m["entityUrn"].(string)
+			dashUrn, _ := m["dashEntityUrn"].(string)
+			if strings.Contains(urn, "miniProfile") || strings.Contains(dashUrn, "fsd_profile") {
+				return m
+			}
+			// Also check $type
+			if t, _ := m["$type"].(string); strings.Contains(t, "MiniProfile") || strings.Contains(t, "miniProfile") {
+				return m
+			}
+		}
+	}
+	// Fallback: nested miniProfile under data or top-level
+	if data, ok := raw["data"].(map[string]any); ok {
+		if mp, ok := data["miniProfile"].(map[string]any); ok {
+			return mp
+		}
+	}
+	if mp, ok := raw["miniProfile"].(map[string]any); ok {
+		return mp
+	}
+	return nil
+}
+
+// findProfileInIncluded finds the main profile entity from included[] in the dash API response.
+func findProfileInIncluded(raw map[string]any) map[string]any {
+	included, _ := raw["included"].([]any)
+	for _, item := range included {
+		m, ok := item.(map[string]any)
+		if !ok {
+			continue
+		}
+		t, _ := m["$type"].(string)
+		urn, _ := m["entityUrn"].(string)
+		if strings.Contains(t, "Profile") && strings.Contains(urn, "fsd_profile") {
+			return m
+		}
+	}
+	// Fallback: any item with firstName
+	for _, item := range included {
+		m, ok := item.(map[string]any)
+		if !ok {
+			continue
+		}
+		if _, ok := m["firstName"]; ok {
+			return m
+		}
+	}
+	return nil
+}
+
+func getStringFrom(m map[string]any, key string) string {
+	if m == nil {
+		return ""
+	}
+	v, _ := m[key].(string)
+	return v
 }
 
 type Profile struct {
@@ -93,27 +158,33 @@ func (li *LinkedIn) GetProfile(ctx context.Context, publicIdentifierOrURN string
 	}
 
 	var raw map[string]any
-	path := fmt.Sprintf("/identity/profiles/%s/profileView", url.PathEscape(id))
-	if err := li.c.Do(ctx, "GET", path, nil, nil, &raw); err != nil {
+	// Use the dash API (the old /identity/profiles/{id}/profileView is deprecated/410)
+	query := url.Values{"q": {"memberIdentity"}, "memberIdentity": {id}}
+	if err := li.c.Do(ctx, "GET", "/identity/dash/profiles", query, nil, &raw); err != nil {
 		return Profile{}, err
 	}
 
-	profilePublicID := getString(raw, "profile", "miniProfile", "publicIdentifier")
-	if profilePublicID == "" {
-		profilePublicID = getString(raw, "profile", "publicIdentifier")
+	// The dash API returns a normalized response with profile data in included[]
+	prof := findProfileInIncluded(raw)
+
+	profilePublicID := getStringFrom(prof, "publicIdentifier")
+	first := getStringFrom(prof, "firstName")
+	last := getStringFrom(prof, "lastName")
+	headline := getStringFrom(prof, "headline")
+	summary := getStringFrom(prof, "summary")
+	location := getStringFrom(prof, "geoLocationName")
+	if location == "" {
+		location = getStringFrom(prof, "locationName")
 	}
 
-	first := getString(raw, "profile", "firstName")
-	last := getString(raw, "profile", "lastName")
-	headline := getString(raw, "profile", "headline")
-	summary := getString(raw, "profile", "summary")
-	location := getString(raw, "profile", "locationName")
-
-	miniEntityURN := getString(raw, "profile", "miniProfile", "entityUrn")
-	if miniEntityURN == "" {
-		miniEntityURN = getString(raw, "profile", "miniProfile", "entityURN")
+	entityURN := getStringFrom(prof, "entityUrn")
+	if entityURN == "" {
+		entityURN = getStringFrom(prof, "dashEntityUrn")
 	}
-	memberID := urnID(miniEntityURN)
+	memberID := urnID(entityURN)
+	if memberID == "" {
+		memberID = urnID(getStringFrom(prof, "objectUrn"))
+	}
 	memberURN := ""
 	if memberID != "" {
 		memberURN = "urn:li:member:" + memberID
@@ -126,7 +197,7 @@ func (li *LinkedIn) GetProfile(ctx context.Context, publicIdentifierOrURN string
 		Headline:             headline,
 		Summary:              summary,
 		LocationName:         location,
-		MiniProfileEntityURN: miniEntityURN,
+		MiniProfileEntityURN: entityURN,
 		MemberID:             memberID,
 		MemberURN:            memberURN,
 	}, nil
@@ -245,17 +316,19 @@ type SearchItem struct {
 	TargetURN         string
 }
 
+// SearchQueryID is the GraphQL query ID for search clusters.
+// LinkedIn rotates these periodically; update if search returns 500.
+const SearchQueryID = "voyagerSearchDashClusters.ef3d0937fb65bd7812e32e5a85028e79"
+
 func (li *LinkedIn) SearchPeople(ctx context.Context, keywords string, start, count int) ([]SearchItem, error) {
-	filters := "List(resultType->PEOPLE)"
-	return li.searchBlended(ctx, keywords, filters, start, count)
+	return li.searchGraphQL(ctx, keywords, "PEOPLE", start, count)
 }
 
 func (li *LinkedIn) SearchJobs(ctx context.Context, keywords string, start, count int) ([]SearchItem, error) {
-	filters := "List(resultType->JOBS)"
-	return li.searchBlended(ctx, keywords, filters, start, count)
+	return li.searchGraphQL(ctx, keywords, "JOBS", start, count)
 }
 
-func (li *LinkedIn) searchBlended(ctx context.Context, keywords string, filters string, start, count int) ([]SearchItem, error) {
+func (li *LinkedIn) searchGraphQL(ctx context.Context, keywords string, resultType string, start, count int) ([]SearchItem, error) {
 	if strings.TrimSpace(keywords) == "" {
 		return nil, fmt.Errorf("empty query")
 	}
@@ -266,61 +339,75 @@ func (li *LinkedIn) searchBlended(ctx context.Context, keywords string, filters 
 		start = 0
 	}
 
-	q := url.Values{}
-	q.Set("count", fmt.Sprintf("%d", count))
-	q.Set("filters", filters)
-	q.Set("origin", "GLOBAL_SEARCH_HEADER")
-	q.Set("q", "all")
-	q.Set("start", fmt.Sprintf("%d", start))
-	q.Set("queryContext", "List(spellCorrectionEnabled->true,relatedSearchesEnabled->true,kcardTypes->PROFILE|COMPANY)")
-	q.Set("keywords", keywords)
+	// Build the LinkedIn-style variables tuple.
+	// LinkedIn uses a custom tuple syntax that must NOT be percent-encoded for parens/commas/colons.
+	// Only the keywords value needs %20 encoding for spaces.
+	escapedKW := strings.ReplaceAll(url.PathEscape(keywords), "+", "%20")
+	variables := fmt.Sprintf(
+		"(start:%d,origin:OTHER,query:(keywords:%s,flagshipSearchIntent:SEARCH_SRP,queryParameters:List((key:resultType,value:List(%s))),includeFiltersInResponse:false))",
+		start, escapedKW, resultType,
+	)
+
+	// Build the raw query string manually to avoid double-encoding the tuple syntax
+	rawQuery := fmt.Sprintf("includeWebMetadata=true&variables=%s&queryId=%s",
+		variables, SearchQueryID)
 
 	var raw map[string]any
-	if err := li.c.Do(ctx, "GET", "/search/blended", q, nil, &raw); err != nil {
+	if err := li.c.DoRaw(ctx, "GET", "/graphql", rawQuery, nil, &raw); err != nil {
 		return nil, err
 	}
 
-	// Expected structure (observed in other implementations):
-	// data.elements[*].elements[*] -> individual results
-	data, ok := raw["data"].(map[string]any)
-	if !ok {
-		return nil, fmt.Errorf("unexpected search response")
-	}
-	outer, _ := data["elements"].([]any)
-
+	// Results are in included[] as EntityResultViewModel objects
+	included, _ := raw["included"].([]any)
 	var items []SearchItem
-	for _, o := range outer {
-		om, ok := o.(map[string]any)
+	for _, el := range included {
+		m, ok := el.(map[string]any)
 		if !ok {
 			continue
 		}
-		inner, _ := om["elements"].([]any)
-		for _, it := range inner {
-			m, ok := it.(map[string]any)
-			if !ok {
-				continue
-			}
-
-			publicID := getString(m, "publicIdentifier")
-			title := getString(m, "title", "text")
-			primary := getString(m, "primarySubtitle", "text")
-			secondary := getString(m, "secondarySubtitle", "text")
-			target := getString(m, "targetUrn")
-			if target == "" {
-				target = getString(m, "trackingUrn")
-			}
-
-			items = append(items, SearchItem{
-				PublicIdentifier:  publicID,
-				Title:             title,
-				PrimarySubtitle:   primary,
-				SecondarySubtitle: secondary,
-				TargetURN:         target,
-			})
+		t, _ := m["$type"].(string)
+		if !strings.Contains(t, "EntityResultViewModel") {
+			continue
 		}
+
+		title := getNestedText(m, "title")
+		primary := getNestedText(m, "primarySubtitle")
+		secondary := getNestedText(m, "secondarySubtitle")
+		targetURN, _ := m["entityUrn"].(string)
+
+		// Try to extract publicIdentifier from the navigation URL
+		publicID := ""
+		if navURL := getString(m, "navigationUrl"); navURL != "" {
+			publicID = auth.NormalizePublicIdentifier(navURL)
+		}
+
+		items = append(items, SearchItem{
+			PublicIdentifier:  publicID,
+			Title:             title,
+			PrimarySubtitle:   primary,
+			SecondarySubtitle: secondary,
+			TargetURN:         targetURN,
+		})
 	}
 
 	return items, nil
+}
+
+// getNestedText extracts .text from a field that may be a string or {text: "..."} object.
+func getNestedText(m map[string]any, key string) string {
+	v, ok := m[key]
+	if !ok {
+		return ""
+	}
+	switch t := v.(type) {
+	case string:
+		return t
+	case map[string]any:
+		s, _ := t["text"].(string)
+		return s
+	default:
+		return ""
+	}
 }
 
 func (li *LinkedIn) Follow(ctx context.Context, memberURN string) error {

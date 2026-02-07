@@ -17,7 +17,7 @@ import (
 const (
 	DefaultBaseURL = "https://www.linkedin.com/voyager/api"
 
-	defaultUserAgent      = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_13_5) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/66.0.3359.181 Safari/537.36"
+	defaultUserAgent      = "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36"
 	defaultAcceptLanguage = "en-US,en;q=0.9"
 )
 
@@ -107,15 +107,29 @@ func (e *HTTPError) Error() string {
 	return fmt.Sprintf("%s %s: HTTP %d: %s", e.Method, e.URL, e.StatusCode, e.Body)
 }
 
+// DoRaw is like Do but accepts a pre-built raw query string (not url.Values)
+// to avoid double-encoding LinkedIn's tuple syntax.
+func (c *Client) DoRaw(ctx context.Context, method, path string, rawQuery string, body any, out any) error {
+	return c.doInternal(ctx, method, path, rawQuery, body, out)
+}
+
 func (c *Client) Do(ctx context.Context, method, path string, query url.Values, body any, out any) error {
+	var rawQuery string
+	if query != nil {
+		rawQuery = query.Encode()
+	}
+	return c.doInternal(ctx, method, path, rawQuery, body, out)
+}
+
+func (c *Client) doInternal(ctx context.Context, method, path string, rawQuery string, body any, out any) error {
 	if c.Cookies.LiAt == "" || c.Cookies.JSessionID == "" {
 		return fmt.Errorf("missing auth cookies (li_at, JSESSIONID)")
 	}
 
 	u := *c.BaseURL
 	u.Path = strings.TrimSuffix(u.Path, "/") + "/" + strings.TrimPrefix(path, "/")
-	if query != nil {
-		u.RawQuery = query.Encode()
+	if rawQuery != "" {
+		u.RawQuery = rawQuery
 	}
 
 	var bodyReader io.Reader
