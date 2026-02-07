@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"sort"
 	"strings"
+	"time"
 )
 
 const (
@@ -144,13 +145,20 @@ func (li *LinkedIn) SendMessage(ctx context.Context, mailboxURN, conversationURN
 		return fmt.Errorf("empty message text")
 	}
 
+	originToken := fmt.Sprintf("%d", time.Now().UnixNano())
+
 	payload := map[string]any{
-		"body": map[string]any{
-			"text":       text,
-			"attributes": []any{},
+		"message": map[string]any{
+			"body": map[string]any{
+				"text":       text,
+				"attributes": []any{},
+			},
+			"renderContentUnions": []any{},
+			"conversationUrn":    conversationURN,
+			"originToken":        originToken,
 		},
-		"conversationUrn": conversationURN,
-		"mailboxUrn":      mailboxURN,
+		"mailboxUrn":                    mailboxURN,
+		"dedupeByClientGeneratedToken":  false,
 	}
 
 	rawQuery := "action=createMessage"
