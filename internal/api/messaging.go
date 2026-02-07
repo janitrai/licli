@@ -2,10 +2,12 @@ package api
 
 import (
 	"context"
+	"crypto/rand"
 	"fmt"
 	"sort"
 	"strings"
-	"time"
+
+	"github.com/google/uuid"
 )
 
 const (
@@ -138,14 +140,25 @@ func (li *LinkedIn) GetMessages(ctx context.Context, conversationURN string, cou
 	return ParseMessages(raw), nil
 }
 
+// generateTrackingID generates a 16-byte random tracking ID encoded as a
+// Latin-1 string (each byte 0x00–0xFF maps to its Unicode codepoint).
+// LinkedIn's messaging API requires this exact format — base64 or omission
+// results in HTTP 400.
+func generateTrackingID() string {
+	b := make([]byte, 16)
+	_, _ = rand.Read(b)
+	runes := make([]rune, 16)
+	for i, v := range b {
+		runes[i] = rune(v)
+	}
+	return string(runes)
+}
+
 // SendMessage sends a text message to an existing conversation.
-// This is experimental — the endpoint is inferred from LinkedIn's dash API patterns.
 func (li *LinkedIn) SendMessage(ctx context.Context, mailboxURN, conversationURN, text string) error {
 	if strings.TrimSpace(text) == "" {
 		return fmt.Errorf("empty message text")
 	}
-
-	originToken := fmt.Sprintf("%d", time.Now().UnixNano())
 
 	payload := map[string]any{
 		"message": map[string]any{
@@ -155,19 +168,19 @@ func (li *LinkedIn) SendMessage(ctx context.Context, mailboxURN, conversationURN
 			},
 			"renderContentUnions": []any{},
 			"conversationUrn":    conversationURN,
-			"originToken":        originToken,
+			"originToken":        uuid.New().String(),
 		},
-		"mailboxUrn":                    mailboxURN,
-		"dedupeByClientGeneratedToken":  false,
+		"mailboxUrn":                   mailboxURN,
+		"trackingId":                   generateTrackingID(),
+		"dedupeByClientGeneratedToken": false,
 	}
 
 	rawQuery := "action=createMessage"
-	return li.c.DoRaw(ctx, "POST", "voyagerMessagingDashMessengerMessages", rawQuery, payload, nil)
+	return li.c.DoMessaging(ctx, "POST", "voyagerMessagingDashMessengerMessages", rawQuery, payload, nil)
 }
 
 // CreateConversationWithMessage starts a new conversation with a message.
 // recipientURNs are urn:li:fsd_profile:… URNs.
-// This is experimental — the endpoint is inferred from LinkedIn's dash API patterns.
 func (li *LinkedIn) CreateConversationWithMessage(ctx context.Context, mailboxURN string, recipientURNs []string, text string) error {
 	if strings.TrimSpace(text) == "" {
 		return fmt.Errorf("empty message text")
@@ -187,14 +200,18 @@ func (li *LinkedIn) CreateConversationWithMessage(ctx context.Context, mailboxUR
 				"text":       text,
 				"attributes": []any{},
 			},
+			"renderContentUnions": []any{},
+			"originToken":         uuid.New().String(),
 		},
-		"recipients":  recipients,
-		"mailboxUrn":  mailboxURN,
-		"subtype":     "MEMBER_TO_MEMBER",
+		"recipients":                   recipients,
+		"mailboxUrn":                   mailboxURN,
+		"trackingId":                   generateTrackingID(),
+		"subtype":                      "MEMBER_TO_MEMBER",
+		"dedupeByClientGeneratedToken": false,
 	}
 
 	rawQuery := "action=create"
-	return li.c.DoRaw(ctx, "POST", "voyagerMessagingDashMessengerConversations", rawQuery, payload, nil)
+	return li.c.DoMessaging(ctx, "POST", "voyagerMessagingDashMessengerConversations", rawQuery, payload, nil)
 }
 
 // ---------------------------------------------------------------------------

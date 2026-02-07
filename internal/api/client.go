@@ -110,7 +110,18 @@ func (e *HTTPError) Error() string {
 // DoRaw is like Do but accepts a pre-built raw query string (not url.Values)
 // to avoid double-encoding LinkedIn's tuple syntax.
 func (c *Client) DoRaw(ctx context.Context, method, path string, rawQuery string, body any, out any) error {
-	return c.doInternal(ctx, method, path, rawQuery, body, out)
+	return c.doInternal(ctx, method, path, rawQuery, body, out, nil)
+}
+
+// DoMessaging is like DoRaw but overrides Content-Type and Accept headers
+// for LinkedIn's messaging write endpoints (which require text/plain to
+// avoid CORS preflight and return plain JSON).
+func (c *Client) DoMessaging(ctx context.Context, method, path string, rawQuery string, body any, out any) error {
+	overrides := map[string]string{
+		"content-type": "text/plain;charset=UTF-8",
+		"accept":       "application/json",
+	}
+	return c.doInternal(ctx, method, path, rawQuery, body, out, overrides)
 }
 
 func (c *Client) Do(ctx context.Context, method, path string, query url.Values, body any, out any) error {
@@ -118,10 +129,10 @@ func (c *Client) Do(ctx context.Context, method, path string, query url.Values, 
 	if query != nil {
 		rawQuery = query.Encode()
 	}
-	return c.doInternal(ctx, method, path, rawQuery, body, out)
+	return c.doInternal(ctx, method, path, rawQuery, body, out, nil)
 }
 
-func (c *Client) doInternal(ctx context.Context, method, path string, rawQuery string, body any, out any) error {
+func (c *Client) doInternal(ctx context.Context, method, path string, rawQuery string, body any, out any, headerOverrides map[string]string) error {
 	if c.Cookies.LiAt == "" || c.Cookies.JSessionID == "" {
 		return fmt.Errorf("missing auth cookies (li_at, JSESSIONID)")
 	}
@@ -164,6 +175,10 @@ func (c *Client) doInternal(ctx context.Context, method, path string, rawQuery s
 	req.Header.Set("cookie", c.Cookies.CookieHeader())
 	if contentType != "" && req.Header.Get("content-type") == "" {
 		req.Header.Set("content-type", contentType)
+	}
+	// Apply any per-request header overrides (e.g. messaging endpoints).
+	for k, v := range headerOverrides {
+		req.Header.Set(k, v)
 	}
 
 	if c.Debug {

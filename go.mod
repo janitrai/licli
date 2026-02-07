@@ -5,6 +5,7 @@ go 1.22
 require (
 	github.com/chromedp/cdproto v0.0.0-20241003230502-a4a8f7c660df
 	github.com/chromedp/chromedp v0.11.0
+	github.com/google/uuid v1.6.0
 	github.com/spf13/cobra v1.10.2
 )
 
