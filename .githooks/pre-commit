@@ -1,0 +1,28 @@
+#!/bin/bash
+# Pre-commit hook: block binary/executable files from being committed
+
+against=HEAD
+if ! git rev-parse --verify HEAD >/dev/null 2>&1; then
+  against=$(git hash-object -t tree /dev/null)
+fi
+
+binary_files=()
+while IFS= read -r file; do
+  [[ -z "$file" ]] && continue
+  mime=$(file --brief --mime-type "$file" 2>/dev/null)
+  case "$mime" in
+    application/x-executable|application/x-pie-executable|application/x-sharedlib|application/x-mach-binary|application/octet-stream)
+      binary_files+=("$file")
+      ;;
+  esac
+done < <(git diff --cached --name-only --diff-filter=ACM "$against")
+
+if [[ ${#binary_files[@]} -gt 0 ]]; then
+  echo "❌ Blocked binary files:"
+  for f in "${binary_files[@]}"; do
+    echo "  - $f ($(file --brief "$f"))"
+  done
+  echo ""
+  echo "Remove them with: git reset HEAD <file>"
+  exit 1
+fi
