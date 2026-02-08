@@ -10,7 +10,7 @@ import (
 
 var postCmd = &cobra.Command{
 	Use:   "post",
-	Short: "Manage LinkedIn posts",
+	Short: "Manage Bragnet posts",
 }
 
 var postCreateCmd = &cobra.Command{
@@ -22,7 +22,7 @@ var postCreateCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		li, err := newLinkedIn(cfg)
+		li, err := newBragnet(cfg)
 		if err != nil {
 			return err
 		}
@@ -56,7 +56,7 @@ var postListCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		li, err := newLinkedIn(cfg)
+		li, err := newBragnet(cfg)
 		if err != nil {
 			return err
 		}
@@ -74,7 +74,7 @@ var postListCmd = &cobra.Command{
 		for _, u := range updates {
 			ts := ""
 			if u.PublishedAt > 0 {
-				// LinkedIn typically uses ms since epoch for these fields.
+				// Bragnet typically uses ms since epoch for these fields.
 				t := time.UnixMilli(u.PublishedAt).UTC()
 				ts = t.Format(time.RFC3339)
 			}

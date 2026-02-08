@@ -7,13 +7,13 @@ import (
 	"strings"
 	"time"
 
-	"github.com/horsefit/li/internal/auth"
+	"github.com/janitrai/bragcli/internal/auth"
 	"github.com/spf13/cobra"
 )
 
 var authCmd = &cobra.Command{
 	Use:   "auth",
-	Short: "Authenticate with LinkedIn",
+	Short: "Authenticate with Bragnet",
 }
 
 var (
@@ -24,7 +24,7 @@ var (
 
 var authLoginCmd = &cobra.Command{
 	Use:   "login",
-	Short: "Login to LinkedIn",
+	Short: "Login to Bragnet",
 	RunE: func(cmd *cobra.Command, args []string) error {
 		cfg, path, err := loadConfig()
 		if err != nil {
@@ -33,8 +33,8 @@ var authLoginCmd = &cobra.Command{
 
 		var cookies auth.Cookies
 		if authManual {
-			_ = auth.OpenBrowser("https://www.linkedin.com/login")
-			fmt.Fprintln(cmd.ErrOrStderr(), "Paste your LinkedIn cookies (from browser devtools -> Application/Storage -> Cookies -> https://www.linkedin.com).")
+			_ = auth.OpenBrowser(auth.BaseURL() + "/login")
+			fmt.Fprintln(cmd.ErrOrStderr(), "Paste your cookies (from browser devtools -> Application/Storage -> Cookies).")
 
 			r := bufio.NewReader(cmd.InOrStdin())
 			fmt.Fprint(cmd.ErrOrStderr(), "li_at: ")
@@ -52,12 +52,12 @@ var authLoginCmd = &cobra.Command{
 				JSessionID: strings.TrimSpace(jsid),
 			}
 		} else {
-			fmt.Fprintln(cmd.ErrOrStderr(), "A Chrome window will open. Complete LinkedIn login, then return to this terminal.")
+			fmt.Fprintln(cmd.ErrOrStderr(), "A Chrome window will open. Complete Bragnet login, then return to this terminal.")
 			ctx := context.Background()
 			cookies, err = auth.LoginWithChrome(ctx, auth.ChromeLoginOptions{
 				Timeout:  authTimeout,
 				Headless: authHeadless,
-				LoginURL: "https://www.linkedin.com/login",
+				LoginURL: auth.BaseURL() + "/login",
 			})
 			if err != nil {
 				return fmt.Errorf("browser login failed: %w (try --manual)", err)
@@ -93,7 +93,7 @@ var authStatusCmd = &cobra.Command{
 			return nil
 		}
 
-		li, err := newLinkedIn(cfg)
+		li, err := newBragnet(cfg)
 		if err != nil {
 			// Cookies exist but can't build a client for some reason.
 			fmt.Fprintf(cmd.OutOrStdout(), "Auth present but unusable: %v\nConfig: %s\n", err, path)

@@ -10,9 +10,9 @@ var (
 )
 
 var rootCmd = &cobra.Command{
-	Use:   "li",
-	Short: "LinkedIn CLI",
-	Long:  `li is a command-line interface for LinkedIn, inspired by gh (GitHub CLI).`,
+	Use:   "bragcli",
+	Short: "Bragnet CLI",
+	Long:  `bragcli is a command-line interface for Bragnet, inspired by gh (GitHub CLI).`,
 }
 
 func Execute() error {

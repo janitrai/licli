@@ -3,7 +3,7 @@ package cmd
 import (
 	"fmt"
 
-	"github.com/horsefit/li/internal/auth"
+	"github.com/janitrai/bragcli/internal/auth"
 	"github.com/spf13/cobra"
 )
 
@@ -18,7 +18,7 @@ var connectCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		li, err := newLinkedIn(cfg)
+		li, err := newBragnet(cfg)
 		if err != nil {
 			return err
 		}

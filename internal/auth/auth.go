@@ -15,6 +15,25 @@ import (
 	"github.com/chromedp/chromedp"
 )
 
+const (
+	// EnvDomain overrides the default target domain.
+	EnvDomain     = "BRAGNET_DOMAIN"
+	defaultDomain = "www.linkedin.com"
+)
+
+// Domain returns the configured target domain.
+func Domain() string {
+	if d := os.Getenv(EnvDomain); d != "" {
+		return d
+	}
+	return defaultDomain
+}
+
+// BaseURL returns the base URL for the target domain.
+func BaseURL() string {
+	return "https://" + Domain()
+}
+
 type Cookies struct {
 	LiAt       string
 	JSessionID string
@@ -35,7 +54,7 @@ func (c Cookies) JSessionIDCookieValue() string {
 	if strings.HasPrefix(c.JSessionID, "\"") && strings.HasSuffix(c.JSessionID, "\"") {
 		return c.JSessionID
 	}
-	// LinkedIn typically stores JSESSIONID quoted; ensure the cookie header matches that format.
+	// The server typically stores JSESSIONID quoted; ensure the cookie header matches that format.
 	return fmt.Sprintf("%q", c.JSessionID)
 }
 
@@ -54,13 +73,16 @@ func (c Cookies) CookieHeader() string {
 }
 
 // NormalizePublicIdentifier accepts inputs like "@jane-doe", "jane-doe",
-// "linkedin.com/in/jane-doe/", or "https://www.linkedin.com/in/jane-doe/".
+// "example.com/in/jane-doe/", or "https://www.example.com/in/jane-doe/".
 func NormalizePublicIdentifier(s string) string {
 	s = strings.TrimSpace(s)
 	s = strings.TrimPrefix(s, "@")
 	s = strings.Trim(s, "/")
 
-	if strings.Contains(s, "linkedin.com/") {
+	domain := Domain()
+	// Strip "www." prefix for matching
+	shortDomain := strings.TrimPrefix(domain, "www.")
+	if strings.Contains(s, shortDomain+"/") {
 		if !strings.HasPrefix(s, "http://") && !strings.HasPrefix(s, "https://") {
 			s = "https://" + s
 		}
@@ -107,7 +129,7 @@ func LoginWithChrome(ctx context.Context, opts ChromeLoginOptions) (Cookies, err
 		opts.Timeout = 10 * time.Minute
 	}
 	if opts.LoginURL == "" {
-		opts.LoginURL = "https://www.linkedin.com/login"
+		opts.LoginURL = BaseURL() + "/login"
 	}
 
 	userDataDir, err := os.MkdirTemp("", "li-chrome-*")
@@ -150,7 +172,7 @@ func LoginWithChrome(ctx context.Context, opts ChromeLoginOptions) (Cookies, err
 
 	for {
 		var out Cookies
-		cookies, err := network.GetCookies().WithUrls([]string{"https://www.linkedin.com/"}).Do(timeoutCtx)
+		cookies, err := network.GetCookies().WithUrls([]string{BaseURL() + "/"}).Do(timeoutCtx)
 		if err == nil {
 			for _, ck := range cookies {
 				switch ck.Name {
@@ -169,7 +191,7 @@ func LoginWithChrome(ctx context.Context, opts ChromeLoginOptions) (Cookies, err
 		case <-ticker.C:
 			continue
 		case <-timeoutCtx.Done():
-			return Cookies{}, fmt.Errorf("timed out waiting for LinkedIn cookies (li_at, JSESSIONID)")
+			return Cookies{}, fmt.Errorf("timed out waiting for auth cookies (li_at, JSESSIONID)")
 		}
 	}
 }

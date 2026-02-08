@@ -9,7 +9,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/horsefit/li/internal/auth"
+	"github.com/janitrai/bragcli/internal/auth"
 )
 
 // ---------------------------------------------------------------------------
@@ -480,7 +480,7 @@ func TestListConversations(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	li := NewLinkedIn(c)
+	li := NewBragnet(c)
 	convos, err := li.ListConversations(context.Background(), "urn:li:fsd_profile:AAA", 20)
 	if err != nil {
 		t.Fatalf("ListConversations() error: %v", err)
@@ -492,7 +492,7 @@ func TestListConversations(t *testing.T) {
 
 func TestListConversations_EmptyProfileURN(t *testing.T) {
 	c, _ := NewClient(auth.Cookies{LiAt: "x", JSessionID: "ajax:y"})
-	li := NewLinkedIn(c)
+	li := NewBragnet(c)
 	_, err := li.ListConversations(context.Background(), "", 20)
 	if err == nil {
 		t.Fatal("expected error for empty profile URN")
@@ -527,7 +527,7 @@ func TestGetMessages(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	li := NewLinkedIn(c)
+	li := NewBragnet(c)
 	msgs, err := li.GetMessages(context.Background(), "urn:li:msg_conversation:(urn:li:fsd_profile:AAA,thread001)", 20)
 	if err != nil {
 		t.Fatalf("GetMessages() error: %v", err)
@@ -546,7 +546,7 @@ func TestGetMessages(t *testing.T) {
 
 func TestGetMessages_EmptyConversationURN(t *testing.T) {
 	c, _ := NewClient(auth.Cookies{LiAt: "x", JSessionID: "ajax:y"})
-	li := NewLinkedIn(c)
+	li := NewBragnet(c)
 	_, err := li.GetMessages(context.Background(), "  ", 20)
 	if err == nil {
 		t.Fatal("expected error for empty conversation URN")

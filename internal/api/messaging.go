@@ -25,7 +25,7 @@ const (
 // Types
 // ---------------------------------------------------------------------------
 
-// Conversation represents a LinkedIn messaging conversation.
+// Conversation represents a Bragnet messaging conversation.
 type Conversation struct {
 	EntityURN    string
 	Participants []Participant
@@ -59,7 +59,7 @@ type Message struct {
 // ---------------------------------------------------------------------------
 
 // encodeURNValue percent-encodes the special characters inside a URN value
-// for use within LinkedIn's tuple-syntax variables. The structural tuple
+// for use within Bragnet's tuple-syntax variables. The structural tuple
 // characters (outer parens, colons, commas) remain literal in the query
 // string, but URN values embedded inside must be encoded.
 func encodeURNValue(urn string) string {
@@ -76,16 +76,16 @@ func encodeURNValue(urn string) string {
 // Query ID helpers
 // ---------------------------------------------------------------------------
 
-func (li *LinkedIn) conversationsQueryID() string {
-	if li.ConversationsQueryID != "" {
-		return li.ConversationsQueryID
+func (bn *Bragnet) conversationsQueryID() string {
+	if bn.ConversationsQueryID != "" {
+		return bn.ConversationsQueryID
 	}
 	return DefaultConversationsQueryID
 }
 
-func (li *LinkedIn) messagesQueryID() string {
-	if li.MessagesQueryID != "" {
-		return li.MessagesQueryID
+func (bn *Bragnet) messagesQueryID() string {
+	if bn.MessagesQueryID != "" {
+		return bn.MessagesQueryID
 	}
 	return DefaultMessagesQueryID
 }
@@ -96,7 +96,7 @@ func (li *LinkedIn) messagesQueryID() string {
 
 // ListConversations fetches the user's inbox conversations.
 // profileURN must be the user's own urn:li:fsd_profile:… URN.
-func (li *LinkedIn) ListConversations(ctx context.Context, profileURN string, count int) ([]Conversation, error) {
+func (bn *Bragnet) ListConversations(ctx context.Context, profileURN string, count int) ([]Conversation, error) {
 	if strings.TrimSpace(profileURN) == "" {
 		return nil, fmt.Errorf("empty profile URN")
 	}
@@ -110,10 +110,10 @@ func (li *LinkedIn) ListConversations(ctx context.Context, profileURN string, co
 		count, encodedURN,
 	)
 
-	rawQuery := fmt.Sprintf("variables=%s&queryId=%s", variables, li.conversationsQueryID())
+	rawQuery := fmt.Sprintf("variables=%s&queryId=%s", variables, bn.conversationsQueryID())
 
 	var raw map[string]any
-	if err := li.c.DoRaw(ctx, "GET", messagingGraphQLPath, rawQuery, nil, &raw); err != nil {
+	if err := bn.c.DoRaw(ctx, "GET", messagingGraphQLPath, rawQuery, nil, &raw); err != nil {
 		return nil, err
 	}
 
@@ -121,7 +121,7 @@ func (li *LinkedIn) ListConversations(ctx context.Context, profileURN string, co
 }
 
 // GetMessages fetches messages in a conversation.
-func (li *LinkedIn) GetMessages(ctx context.Context, conversationURN string, count int) ([]Message, error) {
+func (bn *Bragnet) GetMessages(ctx context.Context, conversationURN string, count int) ([]Message, error) {
 	if strings.TrimSpace(conversationURN) == "" {
 		return nil, fmt.Errorf("empty conversation URN")
 	}
@@ -130,10 +130,10 @@ func (li *LinkedIn) GetMessages(ctx context.Context, conversationURN string, cou
 	encodedURN := encodeURNValue(conversationURN)
 	variables := fmt.Sprintf("(conversationUrn:%s)", encodedURN)
 
-	rawQuery := fmt.Sprintf("variables=%s&queryId=%s", variables, li.messagesQueryID())
+	rawQuery := fmt.Sprintf("variables=%s&queryId=%s", variables, bn.messagesQueryID())
 
 	var raw map[string]any
-	if err := li.c.DoRaw(ctx, "GET", messagingGraphQLPath, rawQuery, nil, &raw); err != nil {
+	if err := bn.c.DoRaw(ctx, "GET", messagingGraphQLPath, rawQuery, nil, &raw); err != nil {
 		return nil, err
 	}
 
@@ -142,7 +142,7 @@ func (li *LinkedIn) GetMessages(ctx context.Context, conversationURN string, cou
 
 // generateTrackingID generates a 16-byte random tracking ID encoded as a
 // Latin-1 string (each byte 0x00–0xFF maps to its Unicode codepoint).
-// LinkedIn's messaging API requires this exact format — base64 or omission
+// Bragnet's messaging API requires this exact format — base64 or omission
 // results in HTTP 400.
 func generateTrackingID() string {
 	b := make([]byte, 16)
@@ -155,7 +155,7 @@ func generateTrackingID() string {
 }
 
 // SendMessage sends a text message to an existing conversation.
-func (li *LinkedIn) SendMessage(ctx context.Context, mailboxURN, conversationURN, text string) error {
+func (bn *Bragnet) SendMessage(ctx context.Context, mailboxURN, conversationURN, text string) error {
 	if strings.TrimSpace(text) == "" {
 		return fmt.Errorf("empty message text")
 	}
@@ -176,15 +176,15 @@ func (li *LinkedIn) SendMessage(ctx context.Context, mailboxURN, conversationURN
 	}
 
 	rawQuery := "action=createMessage"
-	return li.c.DoMessaging(ctx, "POST", "voyagerMessagingDashMessengerMessages", rawQuery, payload, nil)
+	return bn.c.DoMessaging(ctx, "POST", "voyagerMessagingDashMessengerMessages", rawQuery, payload, nil)
 }
 
 // CreateConversationWithMessage starts a new conversation with a message.
 // recipientURNs are urn:li:fsd_profile:… URNs.
 // Uses the same createMessage endpoint as SendMessage but with
 // hostRecipientUrns instead of conversationUrn — this is how
-// LinkedIn's web UI creates new conversations.
-func (li *LinkedIn) CreateConversationWithMessage(ctx context.Context, mailboxURN string, recipientURNs []string, text string) error {
+// Bragnet's web UI creates new conversations.
+func (bn *Bragnet) CreateConversationWithMessage(ctx context.Context, mailboxURN string, recipientURNs []string, text string) error {
 	if strings.TrimSpace(text) == "" {
 		return fmt.Errorf("empty message text")
 	}
@@ -208,14 +208,14 @@ func (li *LinkedIn) CreateConversationWithMessage(ctx context.Context, mailboxUR
 	}
 
 	rawQuery := "action=createMessage"
-	return li.c.DoMessaging(ctx, "POST", "voyagerMessagingDashMessengerMessages", rawQuery, payload, nil)
+	return bn.c.DoMessaging(ctx, "POST", "voyagerMessagingDashMessengerMessages", rawQuery, payload, nil)
 }
 
 // ---------------------------------------------------------------------------
 // Response parsing (exported for testing)
 // ---------------------------------------------------------------------------
 
-// ParseConversations extracts conversations from a LinkedIn messaging GraphQL response.
+// ParseConversations extracts conversations from a Bragnet messaging GraphQL response.
 func ParseConversations(raw map[string]any) []Conversation {
 	included, _ := raw["included"].([]any)
 	if len(included) == 0 {
@@ -315,7 +315,7 @@ func ParseConversations(raw map[string]any) []Conversation {
 	return convos
 }
 
-// ParseMessages extracts messages from a LinkedIn messaging GraphQL response.
+// ParseMessages extracts messages from a Bragnet messaging GraphQL response.
 func ParseMessages(raw map[string]any) []Message {
 	included, _ := raw["included"].([]any)
 	if len(included) == 0 {

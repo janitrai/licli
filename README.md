@@ -1,45 +1,57 @@
-# li - LinkedIn CLI
+# bragcli - Bragnet CLI
 
-A command-line interface for LinkedIn, inspired by `gh` (GitHub CLI).
+A command-line interface for Bragnet, inspired by `gh` (GitHub CLI).
 
 ## Features
 
-- **Authentication**: Browser-session login (stores `li_at` + `JSESSIONID`)
+- **Authentication**: Browser-session login (stores session cookies)
 - **Posts**: Create and list posts
 - **Network**: Follow and connect
 - **Profile**: View profiles (including your own)
 - **Search**: Search people and jobs
-
-Note: this uses LinkedIn's internal Voyager API (`https://www.linkedin.com/voyager/api`) and may break if LinkedIn changes it.
+- **Messaging**: Read and send messages
 
 ## Installation
 
 ```bash
-go install github.com/janitrai/licli@latest
+go install github.com/janitrai/licli/cmd/bragcli@latest
+```
+
+## Configuration
+
+Set the target domain via environment variable:
+
+```bash
+export BRAGNET_DOMAIN="www.example.com"
 ```
 
 ## Usage
 
 ```bash
 # Login
-li auth login
-li auth status
+bragcli auth login
+bragcli auth status
 
 # Post
-li post create "Hello LinkedIn!"
-li post list
+bragcli post create "Hello world!"
+bragcli post list
 
 # Network
-li follow @username
-li connect @username --note "Hey, let's connect!"
+bragcli follow @username
+bragcli connect @username --note "Hey, let's connect!"
 
 # Profile
-li profile view @username
-li profile me
+bragcli profile view @username
+bragcli profile me
 
 # Search
-li search people "software engineer berlin"
-li search jobs "golang developer"
+bragcli search people "software engineer berlin"
+bragcli search jobs "golang developer"
+
+# Messaging
+bragcli message list
+bragcli message read @username
+bragcli message send @username "Hey there!"
 ```
 
 ## Config
@@ -57,7 +69,7 @@ export LI_CONFIG_PATH=/path/to/config.json
 ```bash
 git clone https://github.com/janitrai/licli
 cd licli
-go build
+go build ./cmd/bragcli
 ```
 
 ## License

@@ -6,22 +6,22 @@ import (
 	"net/url"
 	"strings"
 
-	"github.com/horsefit/li/internal/auth"
+	"github.com/janitrai/bragcli/internal/auth"
 )
 
 // DefaultSearchQueryID is the default GraphQL query ID for search clusters.
-// LinkedIn rotates these periodically; update via config if search returns 500.
+// Bragnet rotates these periodically; update via config if search returns 500.
 const DefaultSearchQueryID = "voyagerSearchDashClusters.ef3d0937fb65bd7812e32e5a85028e79"
 
-type LinkedIn struct {
+type Bragnet struct {
 	c                    *Client
 	SearchQueryID        string
 	ConversationsQueryID string
 	MessagesQueryID      string
 }
 
-func NewLinkedIn(c *Client) *LinkedIn {
-	return &LinkedIn{c: c}
+func NewBragnet(c *Client) *Bragnet {
+	return &Bragnet{c: c}
 }
 
 type Me struct {
@@ -36,13 +36,13 @@ type Me struct {
 	MemberURN            string
 }
 
-func (li *LinkedIn) GetMe(ctx context.Context) (Me, error) {
+func (bn *Bragnet) GetMe(ctx context.Context) (Me, error) {
 	var raw map[string]any
-	if err := li.c.Do(ctx, "GET", "/me", nil, nil, &raw); err != nil {
+	if err := bn.c.Do(ctx, "GET", "/me", nil, nil, &raw); err != nil {
 		return Me{}, err
 	}
 
-	// The /me response uses LinkedIn's normalized format:
+	// The /me response uses Bragnet's normalized format:
 	//   data.*miniProfile → URN reference
 	//   included[] → array of resolved entities (miniProfile lives here)
 	mini := findMiniProfile(raw)
@@ -84,7 +84,7 @@ func (li *LinkedIn) GetMe(ctx context.Context) (Me, error) {
 	}, nil
 }
 
-// findMiniProfile extracts the miniProfile object from LinkedIn's normalized response.
+// findMiniProfile extracts the miniProfile object from Bragnet's normalized response.
 // It checks included[] first (normalized format), then falls back to nested paths.
 func findMiniProfile(raw map[string]any) map[string]any {
 	// Check included[] array for a miniProfile entity
@@ -158,7 +158,7 @@ type Profile struct {
 	MemberURN            string
 }
 
-func (li *LinkedIn) GetProfile(ctx context.Context, publicIdentifierOrURN string) (Profile, error) {
+func (bn *Bragnet) GetProfile(ctx context.Context, publicIdentifierOrURN string) (Profile, error) {
 	id := strings.TrimSpace(publicIdentifierOrURN)
 	if id == "" {
 		return Profile{}, fmt.Errorf("empty profile identifier")
@@ -167,7 +167,7 @@ func (li *LinkedIn) GetProfile(ctx context.Context, publicIdentifierOrURN string
 	var raw map[string]any
 	// Use the dash API (the old /identity/profiles/{id}/profileView is deprecated/410)
 	query := url.Values{"q": {"memberIdentity"}, "memberIdentity": {id}}
-	if err := li.c.Do(ctx, "GET", "/identity/dash/profiles", query, nil, &raw); err != nil {
+	if err := bn.c.Do(ctx, "GET", "/identity/dash/profiles", query, nil, &raw); err != nil {
 		return Profile{}, err
 	}
 
@@ -214,7 +214,7 @@ type CreatePostResult struct {
 	EntityURN string
 }
 
-func (li *LinkedIn) CreatePost(ctx context.Context, ownerURN string, text string) (CreatePostResult, error) {
+func (bn *Bragnet) CreatePost(ctx context.Context, ownerURN string, text string) (CreatePostResult, error) {
 	if strings.TrimSpace(text) == "" {
 		return CreatePostResult{}, fmt.Errorf("post text is empty")
 	}
@@ -233,7 +233,7 @@ func (li *LinkedIn) CreatePost(ctx context.Context, ownerURN string, text string
 	}
 
 	var raw map[string]any
-	if err := li.c.Do(ctx, "POST", "/contentcreation/normShares", nil, payload, &raw); err != nil {
+	if err := bn.c.Do(ctx, "POST", "/contentcreation/normShares", nil, payload, &raw); err != nil {
 		return CreatePostResult{}, err
 	}
 
@@ -255,7 +255,7 @@ type FeedUpdate struct {
 	PublishedAt int64
 }
 
-func (li *LinkedIn) ListProfilePosts(ctx context.Context, profileURN string, start, count int) ([]FeedUpdate, error) {
+func (bn *Bragnet) ListProfilePosts(ctx context.Context, profileURN string, start, count int) ([]FeedUpdate, error) {
 	if strings.TrimSpace(profileURN) == "" {
 		return nil, fmt.Errorf("empty profile identifier")
 	}
@@ -274,7 +274,7 @@ func (li *LinkedIn) ListProfilePosts(ctx context.Context, profileURN string, sta
 	q.Set("profileUrn", profileURN)
 
 	var raw map[string]any
-	if err := li.c.Do(ctx, "GET", "/feed/dash/updates", q, nil, &raw); err != nil {
+	if err := bn.c.Do(ctx, "GET", "/feed/dash/updates", q, nil, &raw); err != nil {
 		return nil, err
 	}
 
@@ -329,22 +329,22 @@ type SearchItem struct {
 	TargetURN         string
 }
 
-func (li *LinkedIn) searchQueryID() string {
-	if li.SearchQueryID != "" {
-		return li.SearchQueryID
+func (bn *Bragnet) searchQueryID() string {
+	if bn.SearchQueryID != "" {
+		return bn.SearchQueryID
 	}
 	return DefaultSearchQueryID
 }
 
-func (li *LinkedIn) SearchPeople(ctx context.Context, keywords string, start, count int) ([]SearchItem, error) {
-	return li.searchGraphQL(ctx, keywords, "PEOPLE", start, count)
+func (bn *Bragnet) SearchPeople(ctx context.Context, keywords string, start, count int) ([]SearchItem, error) {
+	return bn.searchGraphQL(ctx, keywords, "PEOPLE", start, count)
 }
 
-func (li *LinkedIn) SearchJobs(ctx context.Context, keywords string, start, count int) ([]SearchItem, error) {
-	return li.searchGraphQL(ctx, keywords, "JOBS", start, count)
+func (bn *Bragnet) SearchJobs(ctx context.Context, keywords string, start, count int) ([]SearchItem, error) {
+	return bn.searchGraphQL(ctx, keywords, "JOBS", start, count)
 }
 
-func (li *LinkedIn) searchGraphQL(ctx context.Context, keywords string, resultType string, start, count int) ([]SearchItem, error) {
+func (bn *Bragnet) searchGraphQL(ctx context.Context, keywords string, resultType string, start, count int) ([]SearchItem, error) {
 	if strings.TrimSpace(keywords) == "" {
 		return nil, fmt.Errorf("empty query")
 	}
@@ -355,8 +355,8 @@ func (li *LinkedIn) searchGraphQL(ctx context.Context, keywords string, resultTy
 		start = 0
 	}
 
-	// Build the LinkedIn-style variables tuple.
-	// LinkedIn uses a custom tuple syntax that must NOT be percent-encoded for parens/commas/colons.
+	// Build the Bragnet-style variables tuple.
+	// Bragnet uses a custom tuple syntax that must NOT be percent-encoded for parens/commas/colons.
 	// Only the keywords value needs %20 encoding for spaces.
 	escapedKW := strings.ReplaceAll(url.PathEscape(keywords), "+", "%20")
 	variables := fmt.Sprintf(
@@ -366,10 +366,10 @@ func (li *LinkedIn) searchGraphQL(ctx context.Context, keywords string, resultTy
 
 	// Build the raw query string manually to avoid double-encoding the tuple syntax
 	rawQuery := fmt.Sprintf("includeWebMetadata=true&variables=%s&queryId=%s",
-		variables, li.searchQueryID())
+		variables, bn.searchQueryID())
 
 	var raw map[string]any
-	if err := li.c.DoRaw(ctx, "GET", "/graphql", rawQuery, nil, &raw); err != nil {
+	if err := bn.c.DoRaw(ctx, "GET", "/graphql", rawQuery, nil, &raw); err != nil {
 		return nil, err
 	}
 
@@ -426,7 +426,7 @@ func getNestedText(m map[string]any, key string) string {
 	}
 }
 
-func (li *LinkedIn) Follow(ctx context.Context, memberURN string) error {
+func (bn *Bragnet) Follow(ctx context.Context, memberURN string) error {
 	memberURN = strings.TrimSpace(memberURN)
 	if memberURN == "" {
 		return fmt.Errorf("empty member urn")
@@ -444,10 +444,10 @@ func (li *LinkedIn) Follow(ctx context.Context, memberURN string) error {
 
 	q := url.Values{}
 	q.Set("action", "followByEntityUrn")
-	return li.c.Do(ctx, "POST", "/feed/dash/follows", q, payload, nil)
+	return bn.c.Do(ctx, "POST", "/feed/dash/follows", q, payload, nil)
 }
 
-func (li *LinkedIn) Connect(ctx context.Context, profileURN string, note string) error {
+func (bn *Bragnet) Connect(ctx context.Context, profileURN string, note string) error {
 	profileURN = strings.TrimSpace(profileURN)
 	if profileURN == "" {
 		return fmt.Errorf("empty profile URN")
@@ -465,7 +465,7 @@ func (li *LinkedIn) Connect(ctx context.Context, profileURN string, note string)
 
 	q := url.Values{}
 	q.Set("action", "verifyQuotaAndCreate")
-	return li.c.Do(ctx, "POST", "/voyagerRelationshipsDashMemberRelationships", q, payload, nil)
+	return bn.c.Do(ctx, "POST", "/voyagerRelationshipsDashMemberRelationships", q, payload, nil)
 }
 
 func urnID(urn string) string {

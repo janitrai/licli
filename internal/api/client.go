@@ -11,15 +11,18 @@ import (
 	"strings"
 	"time"
 
-	"github.com/horsefit/li/internal/auth"
+	"github.com/janitrai/bragcli/internal/auth"
 )
 
 const (
-	DefaultBaseURL = "https://www.linkedin.com/voyager/api"
-
 	defaultUserAgent      = "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36"
 	defaultAcceptLanguage = "en-US,en;q=0.9"
 )
+
+// DefaultBaseURL returns the Voyager API base URL using the configured domain.
+func DefaultBaseURL() string {
+	return auth.BaseURL() + "/voyager/api"
+}
 
 type Client struct {
 	BaseURL *url.URL
@@ -65,7 +68,7 @@ func WithDebug(out io.Writer) Option {
 }
 
 func NewClient(cookies auth.Cookies, opts ...Option) (*Client, error) {
-	u, err := url.Parse(DefaultBaseURL)
+	u, err := url.Parse(DefaultBaseURL())
 	if err != nil {
 		return nil, fmt.Errorf("parse default base url: %w", err)
 	}
@@ -108,13 +111,13 @@ func (e *HTTPError) Error() string {
 }
 
 // DoRaw is like Do but accepts a pre-built raw query string (not url.Values)
-// to avoid double-encoding LinkedIn's tuple syntax.
+// to avoid double-encoding Bragnet's tuple syntax.
 func (c *Client) DoRaw(ctx context.Context, method, path string, rawQuery string, body any, out any) error {
 	return c.doInternal(ctx, method, path, rawQuery, body, out, nil)
 }
 
 // DoMessaging is like DoRaw but overrides Content-Type and Accept headers
-// for LinkedIn's messaging write endpoints (which require text/plain to
+// for Bragnet's messaging write endpoints (which require text/plain to
 // avoid CORS preflight and return plain JSON).
 func (c *Client) DoMessaging(ctx context.Context, method, path string, rawQuery string, body any, out any) error {
 	overrides := map[string]string{
@@ -203,7 +206,7 @@ func (c *Client) doInternal(ctx context.Context, method, path string, rawQuery s
 			Method:     method,
 			URL:        u.String(),
 			StatusCode: resp.StatusCode,
-			Body:       "rate limited by LinkedIn, try again later",
+			Body:       "rate limited by Bragnet, try again later",
 		}
 	}
 

@@ -5,15 +5,15 @@ import (
 	"strings"
 	"time"
 
-	"github.com/horsefit/li/internal/api"
-	"github.com/horsefit/li/internal/auth"
+	"github.com/janitrai/bragcli/internal/api"
+	"github.com/janitrai/bragcli/internal/auth"
 	"github.com/spf13/cobra"
 )
 
 var messageCmd = &cobra.Command{
 	Use:     "message",
 	Aliases: []string{"msg"},
-	Short:   "LinkedIn messaging",
+	Short:   "Bragnet messaging",
 }
 
 var messageListLimit int
@@ -27,7 +27,7 @@ var messageListCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		li, err := newLinkedIn(cfg)
+		li, err := newBragnet(cfg)
 		if err != nil {
 			return err
 		}
@@ -87,7 +87,7 @@ var messageReadCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		li, err := newLinkedIn(cfg)
+		li, err := newBragnet(cfg)
 		if err != nil {
 			return err
 		}
@@ -153,14 +153,14 @@ var messageReadCmd = &cobra.Command{
 var messageSendCmd = &cobra.Command{
 	Use:   "send <username> <message>",
 	Short: "Send a message to a user (experimental)",
-	Long:  "Send a text message to a LinkedIn user. Creates a new conversation if one doesn't exist.\nNote: this command is experimental and may not work with all LinkedIn API versions.",
+	Long:  "Send a text message to a Bragnet user. Creates a new conversation if one doesn't exist.\nNote: this command is experimental and may not work with all Bragnet API versions.",
 	Args:  cobra.MinimumNArgs(2),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		cfg, _, err := loadConfig()
 		if err != nil {
 			return err
 		}
-		li, err := newLinkedIn(cfg)
+		li, err := newBragnet(cfg)
 		if err != nil {
 			return err
 		}
@@ -211,7 +211,7 @@ var messageSendCmd = &cobra.Command{
 // resolveMyProfileURN fetches the current user's fsd_profile URN.
 // It first tries Me.ProfileURN (dashEntityUrn), then falls back to
 // fetching the full profile via the public identifier.
-func resolveMyProfileURN(cmd *cobra.Command, li *api.LinkedIn) (string, error) {
+func resolveMyProfileURN(cmd *cobra.Command, li *api.Bragnet) (string, error) {
 	me, err := li.GetMe(cmd.Context())
 	if err != nil {
 		return "", fmt.Errorf("get current user: %w", err)

@@ -4,13 +4,13 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/horsefit/li/internal/auth"
+	"github.com/janitrai/bragcli/internal/auth"
 	"github.com/spf13/cobra"
 )
 
 var profileCmd = &cobra.Command{
 	Use:   "profile",
-	Short: "View LinkedIn profiles",
+	Short: "View Bragnet profiles",
 }
 
 var profileViewCmd = &cobra.Command{
@@ -22,7 +22,7 @@ var profileViewCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		li, err := newLinkedIn(cfg)
+		li, err := newBragnet(cfg)
 		if err != nil {
 			return err
 		}

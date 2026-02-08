@@ -9,7 +9,7 @@ import (
 
 var searchCmd = &cobra.Command{
 	Use:   "search",
-	Short: "Search LinkedIn",
+	Short: "Search Bragnet",
 }
 
 var searchLimit int
@@ -23,7 +23,7 @@ var searchPeopleCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		li, err := newLinkedIn(cfg)
+		li, err := newBragnet(cfg)
 		if err != nil {
 			return err
 		}
@@ -63,7 +63,7 @@ var searchJobsCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		li, err := newLinkedIn(cfg)
+		li, err := newBragnet(cfg)
 		if err != nil {
 			return err
 		}

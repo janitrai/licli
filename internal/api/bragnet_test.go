@@ -8,7 +8,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/horsefit/li/internal/auth"
+	"github.com/janitrai/bragcli/internal/auth"
 )
 
 // ---------------------------------------------------------------------------
@@ -502,7 +502,7 @@ func TestFindFirstString(t *testing.T) {
 // GetMe (with mock HTTP server)
 // ---------------------------------------------------------------------------
 
-// Realistic /me response fixture in LinkedIn normalized format
+// Realistic /me response fixture in Bragnet normalized format
 const getMeFixture = `{
 	"data": {
 		"*miniProfile": "urn:li:fs_miniProfile:ACoAAB12345"
@@ -540,7 +540,7 @@ func TestGetMe(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	li := NewLinkedIn(c)
+	li := NewBragnet(c)
 	me, err := li.GetMe(context.Background())
 	if err != nil {
 		t.Fatalf("GetMe() error: %v", err)
@@ -599,7 +599,7 @@ func TestGetMe_FallbackMiniProfile(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	me, err := NewLinkedIn(c).GetMe(context.Background())
+	me, err := NewBragnet(c).GetMe(context.Background())
 	if err != nil {
 		t.Fatalf("GetMe() error: %v", err)
 	}
@@ -662,7 +662,7 @@ func TestGetProfile(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	prof, err := NewLinkedIn(c).GetProfile(context.Background(), "jane-smith")
+	prof, err := NewBragnet(c).GetProfile(context.Background(), "jane-smith")
 	if err != nil {
 		t.Fatalf("GetProfile() error: %v", err)
 	}
@@ -698,7 +698,7 @@ func TestGetProfile_EmptyIdentifier(t *testing.T) {
 	c, _ := NewClient(
 		auth.Cookies{LiAt: "x", JSessionID: "ajax:y"},
 	)
-	_, err := NewLinkedIn(c).GetProfile(context.Background(), "  ")
+	_, err := NewBragnet(c).GetProfile(context.Background(), "  ")
 	if err == nil {
 		t.Fatal("expected error for empty identifier")
 	}
@@ -755,7 +755,7 @@ func TestSearchPeople(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	items, err := NewLinkedIn(c).SearchPeople(context.Background(), "engineer", 0, 10)
+	items, err := NewBragnet(c).SearchPeople(context.Background(), "engineer", 0, 10)
 	if err != nil {
 		t.Fatalf("SearchPeople() error: %v", err)
 	}
@@ -793,7 +793,7 @@ func TestSearchPeople_EmptyQuery(t *testing.T) {
 	c, _ := NewClient(
 		auth.Cookies{LiAt: "x", JSessionID: "ajax:y"},
 	)
-	_, err := NewLinkedIn(c).SearchPeople(context.Background(), "  ", 0, 10)
+	_, err := NewBragnet(c).SearchPeople(context.Background(), "  ", 0, 10)
 	if err == nil {
 		t.Fatal("expected error for empty query")
 	}
@@ -860,7 +860,7 @@ func TestListProfilePosts(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	posts, err := NewLinkedIn(c).ListProfilePosts(context.Background(), "urn:li:member:67890", 0, 10)
+	posts, err := NewBragnet(c).ListProfilePosts(context.Background(), "urn:li:member:67890", 0, 10)
 	if err != nil {
 		t.Fatalf("ListProfilePosts() error: %v", err)
 	}
@@ -915,7 +915,7 @@ func TestListProfilePosts_WithElements(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	posts, err := NewLinkedIn(c).ListProfilePosts(context.Background(), "urn:li:member:1", 0, 10)
+	posts, err := NewBragnet(c).ListProfilePosts(context.Background(), "urn:li:member:1", 0, 10)
 	if err != nil {
 		t.Fatalf("error: %v", err)
 	}
@@ -931,7 +931,7 @@ func TestListProfilePosts_EmptyProfileURN(t *testing.T) {
 	c, _ := NewClient(
 		auth.Cookies{LiAt: "x", JSessionID: "ajax:y"},
 	)
-	_, err := NewLinkedIn(c).ListProfilePosts(context.Background(), "", 0, 10)
+	_, err := NewBragnet(c).ListProfilePosts(context.Background(), "", 0, 10)
 	if err == nil {
 		t.Fatal("expected error for empty profile URN")
 	}
@@ -953,7 +953,7 @@ func TestGetMe_HTTPError(t *testing.T) {
 		WithBaseURL(ts.URL+"/voyager/api"),
 	)
 
-	_, err := NewLinkedIn(c).GetMe(context.Background())
+	_, err := NewBragnet(c).GetMe(context.Background())
 	if err == nil {
 		t.Fatal("expected error for 403")
 	}
@@ -977,7 +977,7 @@ func TestGetMe_RateLimited(t *testing.T) {
 		WithBaseURL(ts.URL+"/voyager/api"),
 	)
 
-	_, err := NewLinkedIn(c).GetMe(context.Background())
+	_, err := NewBragnet(c).GetMe(context.Background())
 	if err == nil {
 		t.Fatal("expected error for 429")
 	}

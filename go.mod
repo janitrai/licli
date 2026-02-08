@@ -1,4 +1,4 @@
-module github.com/horsefit/li
+module github.com/janitrai/bragcli
 
 go 1.22
 

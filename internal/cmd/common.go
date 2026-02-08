@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/horsefit/li/internal/api"
-	"github.com/horsefit/li/internal/auth"
-	"github.com/horsefit/li/internal/config"
+	"github.com/janitrai/bragcli/internal/api"
+	"github.com/janitrai/bragcli/internal/auth"
+	"github.com/janitrai/bragcli/internal/config"
 )
 
 func loadConfig() (config.Config, string, error) {
@@ -29,7 +29,7 @@ func saveConfig(path string, cfg config.Config) error {
 	return config.Save(path, cfg)
 }
 
-func newLinkedIn(cfg config.Config) (*api.LinkedIn, error) {
+func newBragnet(cfg config.Config) (*api.Bragnet, error) {
 	cookies := auth.Cookies{
 		LiAt:       cfg.Auth.LiAt,
 		JSessionID: cfg.Auth.JSessionID,
@@ -46,7 +46,7 @@ func newLinkedIn(cfg config.Config) (*api.LinkedIn, error) {
 	if err != nil {
 		return nil, err
 	}
-	li := api.NewLinkedIn(client)
+	li := api.NewBragnet(client)
 	li.SearchQueryID = cfg.SearchQueryID
 	li.ConversationsQueryID = cfg.ConversationsQueryID
 	li.MessagesQueryID = cfg.MessagesQueryID

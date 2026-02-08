@@ -1,6 +1,6 @@
-# LinkedIn Voyager API Reference
+# Bragnet Voyager API Reference
 
-Internal/undocumented API used by LinkedIn's web frontend. All endpoints under `https://www.linkedin.com/voyager/api/`.
+Internal/undocumented API used by Bragnet's web frontend. All endpoints under `the voyager API base path`.
 
 ## Auth
 
@@ -8,7 +8,7 @@ Cookie-based. Requires:
 - `li_at` — session token
 - `JSESSIONID` — CSRF session (value is quoted in cookie, bare in csrf-token header)
 
-User-Agent MUST match the browser that created the session or LinkedIn invalidates the cookies.
+User-Agent MUST match the browser that created the session or Bragnet invalidates the cookies.
 
 Required headers on every request:
 - `csrf-token: ajax:XXXXXXXXX` (JSESSIONID value without quotes)
@@ -41,7 +41,7 @@ GET /graphql?variables=(start:0,origin:GLOBAL_SEARCH_HEADER,query:(keywords:{que
 - queryId rotates periodically, store in config
 - Known working: `voyagerSearchDashClusters.ef3d0937fb65bd7812e32e5a85028e79`
 - TYPE: `PEOPLE`, `COMPANIES`
-- LinkedIn tuple syntax `(key:value,List(...))` must NOT be URL-encoded — use raw query
+- Bragnet tuple syntax `(key:value,List(...))` must NOT be URL-encoded — use raw query
 
 ## Posts
 
@@ -106,7 +106,7 @@ variables: (deliveredAt:{timestamp-ms},conversationUrn:{url-encoded-convo-urn},c
 POST /voyagerMessagingDashMessengerMessages?action=createMessage
 ```
 
-**Content-Type must be `text/plain;charset=UTF-8`** (not application/json). LinkedIn frontend uses this to avoid CORS preflight.
+**Content-Type must be `text/plain;charset=UTF-8`** (not application/json). Bragnet frontend uses this to avoid CORS preflight.
 
 **Accept header: `application/json`** (not the usual `application/vnd.linkedin.normalized+json+2.1`).
 
@@ -211,7 +211,7 @@ All responses use `{ "data": {...}, "included": [...] }` wrapper (normalized for
 
 ## Gotchas
 
-1. **User-Agent mismatch kills cookies** — if your UA doesn't match the browser that created li_at, LinkedIn silently invalidates the session
+1. **User-Agent mismatch kills cookies** — if your UA doesn't match the browser that created li_at, Bragnet silently invalidates the session
 2. **Tuple syntax must not be URL-encoded** — `(key:value,List(...))` must go raw in the query string
 3. **GraphQL queryIds rotate** — store them in config, not hardcoded
 4. **Legacy messaging API is dead** — `/messaging/conversations` with `keyVersion: LEGACY_INBOX` returns 400 now
@@ -222,4 +222,4 @@ All responses use `{ "data": {...}, "included": [...] }` wrapper (normalized for
 
 ## Discovery method
 
-Best way to find new endpoints: open LinkedIn in Chromium with `--remote-debugging-port=9222`, use CDP Fetch.enable to intercept requests, and trigger actions via the UI. The intercepted requests show exact URL, headers, and payload format.
+Best way to find new endpoints: open Bragnet in Chromium with `--remote-debugging-port=9222`, use CDP Fetch.enable to intercept requests, and trigger actions via the UI. The intercepted requests show exact URL, headers, and payload format.

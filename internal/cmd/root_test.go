@@ -39,8 +39,8 @@ func TestRootCmd_PersistentFlags(t *testing.T) {
 }
 
 func TestRootCmd_UseAndShort(t *testing.T) {
-	if rootCmd.Use != "li" {
-		t.Errorf("rootCmd.Use = %q, want %q", rootCmd.Use, "li")
+	if rootCmd.Use != "bragcli" {
+		t.Errorf("rootCmd.Use = %q, want %q", rootCmd.Use, "bragcli")
 	}
 	if rootCmd.Short == "" {
 		t.Error("rootCmd.Short is empty")

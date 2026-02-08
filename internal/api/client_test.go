@@ -8,7 +8,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/horsefit/li/internal/auth"
+	"github.com/janitrai/bragcli/internal/auth"
 )
 
 func TestClientDo_SetsAuthHeaders(t *testing.T) {
